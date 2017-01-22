@@ -66,7 +66,6 @@ cli
   .description 'install git dependencies'
   .action (packages, command) ->
     options = command.parent.opts()
-    console.log {options, packages}
 
     if packages.length is 0
       packages = discover options.package

@@ -9,18 +9,39 @@ fs          = require 'fs'
 }         = process
 
 # Helpful promises
-exec = (cmd, options) -> new Promise (resolve, reject) ->
-  [ cmd, args... ] = cmd.split ' '
-  child = cp.spawn cmd, args, options
-  child.on 'close', (code) ->
-    if code is 0 then resolve code
-    else reject code
+exec = (cmds, options) -> new Promise (resolve, reject) ->
+  cmds = if Array.isArray(cmds) then cmds else [cmds]
+
+  stderr = options?.stdio?.stderr or process.stderr
+
+  firstStdin = options?.stdio?.stdin or 'ignore'
+  lastStdout = options?.stdio?.stdout or process.stdout
+
+  prevStdin = null
+
+  for n in [cmds.length - 1 .. 0]
+    [ cmd, args... ] = cmds[n].split ' '
+
+    stdin = if n == 0 then firstStdin else 'pipe'
+    stdout = if n == cmds.length - 1 then lastStdout else 'pipe'
+
+    cmdOpts = Object.assign {}, options, { stdio: [ stdin, stdout, stderr ] }
+    child = cp.spawn cmd, args, cmdOpts
+
+    if prevStdin
+      child.stdout.pipe(prevStdin)
+
+    prevStdin = child.stdin
+
+    if n == cmds.length - 1
+      child.on 'close', (code) ->
+        if code is 0 then resolve code
+        else reject code
 
 mktmp = (prefix) -> new Promise (resolve, reject) ->
   temp.mkdir prefix, (error, path) ->
     if error then return reject error
     resolve path
-
 
 reinstall = (options = {}, pkg) ->
   {
@@ -51,15 +72,15 @@ reinstall = (options = {}, pkg) ->
 
         if github
 
-          cmd = "curl https://api.github.com/repos/#{github[1]}/#{github[2]}/tarball/#{revision} | tar xz"
-          if verbose then console.log "Downloading '#{url}' into #{path}"
+          cmd = [ "wget -qO- https://api.github.com/repos/#{github[1]}/#{github[2]}/tarball/#{revision}", "tar x --gzip --strip-components=1" ]
+          if verbose then console.log "Downloading '#{url}' into '#{tmp}'"
 
           exec cmd, { cwd: tmp, stdio }
 
         else
 
           cmd = "git clone #{url} #{tmp}"
-          if verbose then console.log "Cloning '#{url}' into #{tmp}"
+          if verbose then console.log "Cloning '#{url}' into '#{tmp}'"
 
           exec cmd, { cwd: tmp, stdio }
 
@@ -71,7 +92,7 @@ reinstall = (options = {}, pkg) ->
 
           .then ->
             cmd = "git show --format=format:%h --no-patch"
-            if verbose then console.log "Executing `#{cmd}` in `#{tmp}`"
+            if verbose then console.log "Executing '#{cmd}' in '#{tmp}'"
 
             sha = cp
               .execSync cmd, { cwd: tmp }
@@ -89,8 +110,8 @@ reinstall = (options = {}, pkg) ->
         exec cmd, { cwd: "#{tmp}/#{path}", stdio }
 
       .then ->
-        cmd = "npm install #{tmp}/#{path}"
-        if verbose then console.log "Executing `#{cmd}` in the current directory"
+        cmd = "rsync -a --delete #{tmp}/#{path}/ node_modules/#{name}"
+        if verbose then console.log "Executing '#{cmd}' in the current directory"
 
         exec cmd, { stdio }
 
@@ -136,7 +157,7 @@ reinstall_all = (options = {}, packages) ->
         $
       ///
       revision ?= 'master'
-      path ?= ''
+      path ?= '/'
 
       return (memo) ->
         Promise
