@@ -28,10 +28,14 @@ reinstall = (options = {}, pkg) ->
     verbose
   } = options
 
-  curried = ({ url, revision }) ->
+  curried = ({ url, revision, path }) ->
     do temp.track
 
     tmp = null
+    
+    name = null
+    sha = revision
+
     stdio = [
       'pipe'
       if silent then 'pipe' else process.stdout
@@ -41,49 +45,52 @@ reinstall = (options = {}, pkg) ->
     mktmp 'npm-git-'
       .then (path) ->
         tmp = path
-        cmd = "git clone #{url} #{tmp}"
-        if verbose then console.log "Cloning '#{url}' into #{tmp}"
-
-        exec cmd, { stdio }
-
+        
       .then ->
-        cmd = "git checkout #{revision}"
-        if verbose then console.log "Checking out #{revision}"
+        github = url.match /^git@github.com:([^\/]+?)\/([^\/]+?)$/ or url.match /^https://github.com\/([^\/]+?)\/([^\/]+?).git$/
+        
+        if github
+          
+          cmd = "curl https://api.github.com/repos/#{github[1]}/#{github[2]}/tarball/#{revision} | tar xz"
+          if verbose then console.log "Downloading '#{url}' into #{path}"
+          
+          exec cmd, { cwd: tmp, stdio }
+          
+        else
+          
+          cmd = "git clone #{url} #{tmp}"
+          if verbose then console.log "Cloning '#{url}' into #{tmp}"
 
-        exec cmd, { cwd: tmp, stdio }
+          exec cmd, { cwd: tmp, stdio }
+          
+          .then ->
+            cmd = "git checkout #{revision}"
+            if verbose then console.log "Checking out #{revision}"
+
+            exec cmd, { url, cwd: tmp, stdio }
+            
+          .then ->
+            cmd = "git show --format=format:%h --no-patch"
+            if verbose then console.log "Executing `#{cmd}` in `#{tmp}`"
+
+            sha = cp
+              .execSync cmd, { cwd: tmp }
+              .toString "utf-8"
+              .trim()
+
+      .then ->        
+        package = require "#{tmp}/package.json"
+        name = package.name
 
       .then ->
         cmd = 'npm install'
-        if verbose then console.log "executing `#{cmd}` in `#{tmp}`"
+        if verbose then console.log "Executing `#{cmd}` in `#{tmp}`"
 
-        exec cmd, { cwd: tmp, stdio }
-
-      .then () ->
-        # Gather some metadata that can be displayed and saved later
-        cmd = "git show --format=format:%h --no-patch"
-        if verbose then console.log "executing `#{cmd}` in `#{tmp}`"
-
-        sha = cp
-          .execSync cmd, { cwd: tmp }
-          .toString "utf-8"
-          .trim()
-
-        if verbose then console.log "reading package name from #{tmp}/package.json"
-
-
-        {
-          name
-        }   = require "#{tmp}/package.json"
-
-        return {
-          name
-          url
-          sha
-        }
+        exec cmd, { cwd: "#{tmp}/#{path}", stdio }
 
       .then (metadata) ->
-        cmd = "npm install #{tmp}"
-        if verbose then console.log "executing #{cmd}"
+        cmd = "npm install #{tmp}/#{path}"
+        if verbose then console.log "Executing `#{cmd}` in the current directory"
 
         exec cmd, { stdio }
 
@@ -119,15 +126,17 @@ reinstall_all = (options = {}, packages) ->
     factories = packages.map (url) ->
       [ whole, url, revision ] = url.match ///
         ^
-        (.+?)         # url
-        (?:\#(.+))?   # revision
+        (.+?)        # url
+        (?:\#(.+?))? # revision
+        (?:\?(.+?))? # path
         $
       ///
       revision ?= 'master'
+      path ?= '/'
 
       return (memo) ->
         Promise
-          .resolve reinstall options, { url, revision }
+          .resolve reinstall options, { url, revision, path }
           .then (metadata) ->
             memo.concat metadata
 
