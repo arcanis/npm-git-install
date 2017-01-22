@@ -32,7 +32,7 @@ reinstall = (options = {}, pkg) ->
     do temp.track
 
     tmp = null
-    
+
     name = null
     sha = revision
 
@@ -45,30 +45,30 @@ reinstall = (options = {}, pkg) ->
     mktmp 'npm-git-'
       .then (path) ->
         tmp = path
-        
+
       .then ->
-        github = url.match /^git@github.com:([^\/]+?)\/([^\/]+?)$/ or url.match /^https://github.com\/([^\/]+?)\/([^\/]+?).git$/
-        
+        github = url.match /^git@github.com:([^\/]+?)\/([^\/]+?)$/ or url.match /^https:\/\/github.com\/([^\/]+?)\/([^\/]+?).git$/
+
         if github
-          
+
           cmd = "curl https://api.github.com/repos/#{github[1]}/#{github[2]}/tarball/#{revision} | tar xz"
           if verbose then console.log "Downloading '#{url}' into #{path}"
-          
+
           exec cmd, { cwd: tmp, stdio }
-          
+
         else
-          
+
           cmd = "git clone #{url} #{tmp}"
           if verbose then console.log "Cloning '#{url}' into #{tmp}"
 
           exec cmd, { cwd: tmp, stdio }
-          
+
           .then ->
             cmd = "git checkout #{revision}"
             if verbose then console.log "Checking out #{revision}"
 
             exec cmd, { url, cwd: tmp, stdio }
-            
+
           .then ->
             cmd = "git show --format=format:%h --no-patch"
             if verbose then console.log "Executing `#{cmd}` in `#{tmp}`"
@@ -78,9 +78,9 @@ reinstall = (options = {}, pkg) ->
               .toString "utf-8"
               .trim()
 
-      .then ->        
-        package = require "#{tmp}/package.json"
-        name = package.name
+      .then ->
+        pkginfo = require "#{tmp}/package.json"
+        name = pkginfo.name
 
       .then ->
         cmd = 'npm install'
@@ -88,13 +88,17 @@ reinstall = (options = {}, pkg) ->
 
         exec cmd, { cwd: "#{tmp}/#{path}", stdio }
 
-      .then (metadata) ->
+      .then ->
         cmd = "npm install #{tmp}/#{path}"
         if verbose then console.log "Executing `#{cmd}` in the current directory"
 
         exec cmd, { stdio }
 
-        return metadata
+        return {
+          name
+          url
+          sha
+        }
 
   return if pkg then curried pkg else curried
 
@@ -124,7 +128,7 @@ reinstall_all = (options = {}, packages) ->
 
   curried = (packages) ->
     factories = packages.map (url) ->
-      [ whole, url, revision ] = url.match ///
+      [ whole, url, revision, path ] = url.match ///
         ^
         (.+?)        # url
         (?:\#(.+?))? # revision
@@ -132,7 +136,7 @@ reinstall_all = (options = {}, packages) ->
         $
       ///
       revision ?= 'master'
-      path ?= '/'
+      path ?= ''
 
       return (memo) ->
         Promise
