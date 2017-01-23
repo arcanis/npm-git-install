@@ -81,27 +81,26 @@ reinstall = (options = {}, pkg) ->
           if verbose then console.log "Cloning '#{url}' into '#{tmp}'"
 
           exec cmd, { cwd: tmp, stdio }
+            .then ->
+              cmd = "git checkout #{revision}"
+              if verbose then console.log "Checking out #{revision}"
 
-          .then ->
-            cmd = "git checkout #{revision}"
-            if verbose then console.log "Checking out #{revision}"
+              exec cmd, { url, cwd: tmp, stdio }
 
-            exec cmd, { url, cwd: tmp, stdio }
+            .then ->
+              cmd = "git show --format=format:%h --no-patch"
+              if verbose then console.log "Executing '#{cmd}' in '#{tmp}'"
 
-          .then ->
-            cmd = "git show --format=format:%h --no-patch"
-            if verbose then console.log "Executing '#{cmd}' in '#{tmp}'"
-
-            sha = cp
-              .execSync cmd, { cwd: tmp }
-              .toString "utf-8"
-              .trim()
+              sha = cp
+                .execSync cmd, { cwd: tmp }
+                .toString "utf-8"
+                .trim()
 
       .then ->
-        pkginfo = require "#{tmp}/package.json"
+        pkginfo = require "#{tmp}/#{path}/package.json"
         name = pkginfo.name
 
-        if not name.match(/^[a-z0-9@-][a-z0-9@/._-]*$/) then throw new Error "Invalid package name '#{name}'"
+        if not name.match(/^[a-z0-9@-]([a-z0-9@/._-]*?[a-z0-9@._-])?$/) then throw new Error "Invalid package name '#{name}'"
 
       .then ->
         cmd = 'npm install'
