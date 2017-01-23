@@ -110,11 +110,18 @@ reinstall = (options = {}, pkg) ->
         exec cmd, { cwd: "#{tmp}/#{path}", stdio }
 
       .then ->
-        cmd = "rsync -a --exclude .git --delete #{tmp}/#{path}/ node_modules/#{name}"
+        cmd = "rm -rf node_modules/#{name}"
         if verbose then console.log "Executing '#{cmd}' in the current directory"
 
         exec cmd, { stdio }
 
+      .then ->
+        cmd = "mv --strip-trailing-slashes #{tmp}/#{path} node_modules/#{name}"
+        if verbose then console.log "Executing '#{cmd}' in the current directory"
+
+        exec cmd, { stdio }
+
+      .then ->
         return {
           name
           url

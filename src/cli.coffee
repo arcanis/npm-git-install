@@ -88,10 +88,6 @@ cli
         if options.verbose then console.log "Updating #{options.package}"
         save options.package, report
 
-      .then ->
-        console.log "Finished!"
-        process.exit 0
-
       .catch (error) ->
         console.error error
         process.exit 5
