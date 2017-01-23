@@ -9,6 +9,7 @@
 cli         = require 'commander'
 path        = require 'path'
 fs          = require 'fs'
+util        = require 'util'
 
 cwd         = process.cwd()
 
@@ -80,12 +81,16 @@ cli
       .resolve packages
       .then tap dry_guardian options
       .then reinstall_all options
-      .then tap print_list "Following packages has been installed", options
+      .then tap print_list "Following packages have been installed", util.inspect options, { depth: Infinity }
       .then (report) ->
         return if not options.save
 
         if options.verbose then console.log "Updating #{options.package}"
         save options.package, report
+
+      .then ->
+        console.log "Finished!"
+        process.exit 0
 
       .catch (error) ->
         console.error error
