@@ -71,14 +71,12 @@ reinstall = (options = {}, pkg) ->
         github = url.match /^git@github.com:([^\/]+?)\/([^\/]+?)$/ or url.match /^https:\/\/github.com\/([^\/]+?)\/([^\/]+?).git$/
 
         if github
-
           cmd = [ "wget -qO- https://api.github.com/repos/#{github[1]}/#{github[2]}/tarball/#{revision}", "tar x --gzip --strip-components=1" ]
           if verbose then console.log "Downloading '#{url}' into '#{tmp}'"
 
           exec cmd, { cwd: tmp, stdio }
 
         else
-
           cmd = "git clone #{url} #{tmp}"
           if verbose then console.log "Cloning '#{url}' into '#{tmp}'"
 
@@ -102,6 +100,8 @@ reinstall = (options = {}, pkg) ->
       .then ->
         pkginfo = require "#{tmp}/package.json"
         name = pkginfo.name
+
+        if not name.match(/^[a-z0-9@-][a-z0-9@/._-]*$/) then throw new Error "Invalid package name '#{name}'"
 
       .then ->
         cmd = 'npm install'
