@@ -4,7 +4,6 @@
 {
   discover
   reinstall_all
-  save
 }           = require '.'
 cli         = require 'commander'
 path        = require 'path'
@@ -21,7 +20,6 @@ cli
     A utility to properly install npm git dependencies.
   """
   .option '-q --silent',  'suppress child processes output'
-  .option '-s --save',    'resolve URLs to sha and save it to package file'
   .option '-c --package <path>', 'Optional package.json file location [package.json]', "package.json"
   .option '-v --verbose', 'be verbose'
   .option '-d --dry',     'just print what packages would be installed'
@@ -81,12 +79,6 @@ cli
       .resolve packages
       .then tap dry_guardian options
       .then reinstall_all options
-      .then tap print_list "Following packages have been installed", util.inspect options, { depth: Infinity }
-      .then (report) ->
-        return if not options.save
-
-        if options.verbose then console.log "Updating #{options.package}"
-        save options.package, report
 
       .catch (error) ->
         console.error error

@@ -35,24 +35,6 @@ Then install your dependencies as usual:
 npm install
 ```
 
-If you want to lock versions of git dependencies, use:
-
-```sh
-./node_modules/.bin/npm-git install --save
-```
-
-This will reinstall all git dependencies, but also write last matching commit's sha to `package.json`, effectively locking the versions.
-
-You can also add a dependency and lock it's sha in one go:
-
-```sh
-./node_modules/.bin/npm-git install --save me@my.git.server:me/my-awesome-thing.git
-```
-
-This is probably the safest option, as it guarantees the same revision to be installed every time.
-
-Now it should be easy to deploy, as long as the git executable is available in the environment.
-
 Why
 ---
 
@@ -105,8 +87,6 @@ npm-git install https://github.com/someone/awesome.git me@git.server.com/me/is-a
 
 After hash you can specify a branch name, tag or a specific commit's sha. By default `master` branch is used.
 
-With `--save` option it will write the sha of tha HEAD (i.e. last matching commit) to the package.json, effectively locking the version of the dependency.
-
 ### API
 
 You can also use it programmatically. Just require `npm-git-install`. It exposes four methods:
@@ -123,19 +103,24 @@ You can also use it programmatically. Just require `npm-git-install`. It exposes
 
     Options are the same as for `reinstall`.
 
-    Returns a `Promise` that resolves to `report`, i.e. an array of `metadata` objects that you can pass to `save`. See below.
+    Returns a `Promise` that resolves to `report`, i.e. an array of `metadata` objects:
+
+    ```coffee-script
+    [ {
+      name: "my-awesome-thing"
+      sha: "ef88c40"
+      url: "me@git.server.com/me/my-awesome-thing.git"
+    } ]
+    ```
 
   * `reinstall (options, package)`
 
     Most of the heavy lifting happens here:
 
-    1.  Clones the repo at `package.url`,
-
-    1.  Checks out `package.revision`
-
-    1.  runs `npm install` at cloned repos directory
-
-    1.  installs the package from there.
+    1.  Clone the repo at `package.url`,
+    2.  Checkout `package.revision`,
+    3.  Run `npm install` inside the cloned repos directories,
+    4.  Install the package from there.
 
     Options are:
 
@@ -153,12 +138,6 @@ You can also use it programmatically. Just require `npm-git-install`. It exposes
     ```
 
     You probably don't want to use it directly. Just call `reinstall_all` with relevant options.
-
-  * `save (file, report)`
-
-    Takes a path to a package.json and an array of `metadata` (e.g. a `report` promised by `reinstall_all`). Updates the contents of the package.json file according to the report.
-
-    Returns `undefined`.
 
 If you are a [Gulp][] user, then it should be easy enough to integrate it with your gulpfile. See [./src/cli.coffee][] for example use of the API.
 

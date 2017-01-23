@@ -136,16 +136,6 @@ discover = (package_json = '../package.json') ->
   { gitDependencies } = require package_json
   ( url for name, url of gitDependencies)
 
-save = (file = '../package.json', report) ->
-  file = resolve file
-  delete require.cache[file]
-  pkg = require file
-  pkg.gitDependencies ?= {}
-  for { name, url, sha } in report
-    do (name, url, sha) -> pkg.gitDependencies[name] = "#{url}##{sha}"
-
-  fs.writeFileSync file, JSON.stringify pkg, null, 2
-
 ###
 
 As seen on http://pouchdb.com/2015/05/18/we-have-a-problem-with-promises.html
@@ -185,5 +175,4 @@ module.exports = {
   discover
   reinstall
   reinstall_all
-  save
 }
