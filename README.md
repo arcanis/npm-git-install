@@ -1,19 +1,16 @@
-NPM Git Install
-===============
+# NPM Git Install
 
-Clones and (re)installs packages from remote git repos. It is meant as a temporary solution until [npm/npm#3055][3055] is resolved.
+Clone and (re)install packages from remote git repos. It is meant as a temporary solution until [npm/npm#3055][3055] is resolved.
 
-Install
--------
+## Installation
 
 ```sh
-npm install --save npm-git-install
+$> npm install --save @arcanis/npm-git-install
 ```
 
-Use
----
+## Usage
 
-In your `pacakge.json` add:
+In your `package.json`, add:
 
 ```javascript
 {
@@ -21,51 +18,43 @@ In your `pacakge.json` add:
     "install": "npm-git install"
   }
   "gitDependencies": {
-    "private-package-name": "git@private.git.server:user/repo.git#revision",
-    "public-package-name": "https://github.com/user/repo.git#revision"
+    "private-package-name": "git@private.git.server:user/repo.git#revision?/inner/path",
+    "public-package-name": "https://github.com/user/repo.git#revision?/inner/path"
   }
 }
 ```
 
-Obviously replace `*-package-name` and git URLs with values relevant to your project. URLs has to be in canonical form (i.e. one that you would provide to `git clone` on command line) - no fancy NPM shortcuts like ~~`user/repo`~~ or ~~`bitbucket:user/repo`~~. If you want this, we are open for a PRs.
+Don't forget to replace `*-package-name` and git URLs with values relevant to your project. URLs have to be in canonical form (i.e. one that you would provide to `git clone` on command line) - no fancy NPM shortcuts like ~~`user/repo`~~ or ~~`bitbucket:user/repo`~~. If you want this, we are open for a PRs.
 
-Then install your dependencies as usual:
+Once your package.json has been updated, you can now install your dependencies as usual:
 
 ```sh
-npm install
+$> npm install
 ```
 
-Why
----
+## Why
 
-IMO there is a serious defect in current versions of NPM regarding installation process of dependencies from git repositories. It basically prevents us from installing anything that needs a build step directly from git repos. Because of that some authors are keeping build artifacts in the repos, which I would consider a hurdle at best. Here is [relevant issue with ongoing discussion][3055].
+There's a serious defect in current versions of NPM (and Yarn) regarding installation process of dependencies from git repositories. It basically prevents us from installing anything that needs a build step directly from git repos. Because of that some authors are keeping build artifacts in the repos, which I would consider a hurdle at best, and contributors are sometimes hindered from using their own forks, lowering contributions. Here isthe  [relevant issue][3055], with ongoing discussion.
 
 ### TL/DR:
 
-If you `npm install ../some-local-directory/my-package` then npm will run `prepublish` script of the `my-package` and then install it in current project. This is fine.
+If you `npm install ../some-local-directory/my-package` then npm will run the `prepare` script of `my-package`, then install it in the current project. This is fine.
 
-One would expect that running `npm install git@remote-git-server:me/my-package.git` would also run `prepublish` before installing. Unfortunately it won't. Further more, it will apply `.npmignore`, which will most likely remove all your source files and make it hard to recover. Boo...
+Now, one would expect that running `npm install git@remote-git-server:me/my-package.git` would also run `prepare` before installing, but for some reasons it won't. Even worse, it will apply `.npmignore`, which will most likely remove all your source files and make it hard to recover. Not great.
 
-How
----
+## How
 
 ### From command line
 
 ```sh
-npm-git install
+$> npm-git install
 ```
 
-This simple script will do the following for every `<url>` of `gitDependencies` section of `package.json`:
+This simple script will do the following for every url inside the `gitDependencies` section of your `package.json` file:
 
-1.  Clone the repo it into temporary directory
-
-    using `git clone <url>`.
-
-1.  Run `npm install` in this directory
-
-    which will trigger `prepublish` hook of the package being installed.
-
-1.  then run `npm install <temporary directory>` in your project path.
+1.  Clone the repository into a temporary directory.
+2.  Run `npm install` in the temporary directory, which will in turn trigger the `prepare` hook of the package being installed
+3.  Copy the generated module  in your project path.
 
 In effect you will get your dependency properly installed.
 
