@@ -103,7 +103,7 @@ reinstall = (options = {}, pkg) ->
         if not name.match(/^[a-z0-9@-]([a-z0-9@/._-]*?[a-z0-9@._-])?$/) then throw new Error "Invalid package name '#{name}'"
 
       .then ->
-        cmd = 'npm install'
+        cmd = "#{process.env.npm_execpath or 'npm'} install"
         if verbose then console.log "Executing `#{cmd}` in `#{tmp}`"
 
         exec cmd, { cwd: "#{tmp}/#{path}", stdio }
