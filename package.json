@@ -1,6 +1,6 @@
 {
   "name": "@arcanis/npm-git-install",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "license": "ISC",
   "main": "build/index.js",
   "bin": {
